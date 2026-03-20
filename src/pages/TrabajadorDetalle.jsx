@@ -7,10 +7,10 @@ import { TIPOS_DOCUMENTO_SST, TIPOS_EXAMEN_MEDICO, CONCEPTOS_EXAMEN } from '../l
 // ── Subir archivo a Supabase Storage ────────────────────────────
 async function uploadFile(file, path) {
   const { data, error } = await supabase.storage
-    .from('documentos-sst')
+    .from('documentos')
     .upload(path, file, { upsert: true })
   if (error) throw error
-  const { data: url } = supabase.storage.from('documentos-sst').getPublicUrl(data.path)
+  const { data: url } = supabase.storage.from('documentos').getPublicUrl(data.path)
   return url.publicUrl
 }
 
