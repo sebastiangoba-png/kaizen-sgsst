@@ -8,6 +8,7 @@ import Empresas from './pages/Empresas'
 import Trabajadores from './pages/Trabajadores'
 import TrabajadorDetalle from './pages/TrabajadorDetalle'
 import MiPerfil from './pages/MiPerfil'
+import Usuarios from './pages/Usuarios'
 
 const ROLES_ADMIN    = ['admin', 'profesional', 'consultor']
 const ROLES_FULL     = ['admin', 'profesional', 'consultor', 'cliente']
@@ -61,6 +62,16 @@ export default function App() {
             element={
               <ProtectedRoute rolesPermitidos={ROLES_FULL}>
                 <Layout><TrabajadorDetalle /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Solo admin */}
+          <Route
+            path="/usuarios"
+            element={
+              <ProtectedRoute rolesPermitidos={['admin']}>
+                <Layout><Usuarios /></Layout>
               </ProtectedRoute>
             }
           />
