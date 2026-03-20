@@ -118,38 +118,57 @@ function ModalEditar({ prof, onClose, onSaved }) {
   )
 }
 
-// ── Modal Contraseña (instrucciones CLI) ────────────────────────
+// ── Modal Contraseña ─────────────────────────────────────────────
 
 function ModalPassword({ prof, onClose }) {
-  const usuario = prof.email?.replace('@kaizen.internal', '') ?? prof.numero_documento ?? ''
-  const [copiado, setCopiado] = useState(false)
-  const comando = `node reset-password.cjs ${usuario} NuevaPassword123`
+  const [password, setPassword] = useState('')
+  const [confirm,  setConfirm]  = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
+  const [ok,       setOk]       = useState(false)
 
-  function copiar() {
-    navigator.clipboard.writeText(comando)
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 2000)
+  const nombre = `${prof.nombres ?? ''} ${prof.apellidos ?? ''}`.trim()
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (password.length < 6)      { setError('Mínimo 6 caracteres.'); return }
+    if (password !== confirm)     { setError('Las contraseñas no coinciden.'); return }
+    if (!prof.user_id)            { setError('Este usuario no tiene cuenta activa en el sistema.'); return }
+    setLoading(true); setError('')
+    try {
+      await adminApi.cambiarPassword(prof.user_id, password)
+      setOk(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Modal titulo="Cambiar contraseña" onClose={onClose}>
-      <div className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Para cambiar la contraseña de <span className="font-semibold">{usuario}</span>, ejecuta este comando en la carpeta <code className="bg-gray-100 px-1 rounded text-xs">C:\kaizen-app</code>:
-        </p>
-        <div className="bg-gray-900 rounded-lg p-3 flex items-center justify-between gap-2">
-          <code className="text-green-400 text-xs break-all">{comando}</code>
-          <button onClick={copiar} className="flex-shrink-0 text-xs text-gray-400 hover:text-white transition-colors">
-            {copiado ? '✓' : '⎘'}
+      {ok ? (
+        <div className="text-center py-4 space-y-3">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-gray-900">Contraseña actualizada</p>
+          <p className="text-xs text-gray-500">{nombre} ya puede ingresar con la nueva contraseña.</p>
+          <button onClick={onClose} className="mt-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+            Cerrar
           </button>
         </div>
-        <p className="text-xs text-gray-400">
-          Reemplaza <code className="bg-gray-100 px-1 rounded">NuevaPassword123</code> por la contraseña deseada (mínimo 6 caracteres).
-        </p>
-        <button onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-          Cerrar
-        </button>
-      </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-gray-600">Usuario: <span className="font-medium">{nombre}</span></p>
+          <Field label="Nueva contraseña" value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Mínimo 6 caracteres" />
+          <Field label="Confirmar contraseña" value={confirm} onChange={e => setConfirm(e.target.value)} type="password" placeholder="Repite la contraseña" />
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          <BotonesModal onClose={onClose} loading={loading} labelOk="Cambiar contraseña" />
+        </form>
+      )}
     </Modal>
   )
 }

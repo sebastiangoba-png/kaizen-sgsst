@@ -11,45 +11,58 @@ function json(data: unknown, status = 200) {
   })
 }
 
+function decodeJWT(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(
+      part.length + (4 - (part.length % 4)) % 4, '='
+    )
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const supabaseUrl  = Deno.env.get('SUPABASE_URL')!
-    const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey      = Deno.env.get('SUPABASE_ANON_KEY')!
+    const url        = Deno.env.get('SUPABASE_URL')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Verificar que el llamante está autenticado y es admin
-    const authHeader = req.headers.get('Authorization') ?? ''
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const { data: { user }, error: userErr } = await userClient.auth.getUser()
-    if (userErr || !user) return json({ error: 'No autenticado' }, 401)
-
-    const adminClient = createClient(supabaseUrl, serviceKey, {
+    const admin = createClient(url, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    const { data: prof } = await adminClient
+    // Decodificar JWT para obtener user_id del llamante
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const token = authHeader.replace('Bearer ', '').trim()
+    const payload = decodeJWT(token)
+    const callerId = payload?.sub as string | undefined
+
+    if (!callerId) return json({ error: 'Token inválido o ausente' }, 401)
+
+    // Verificar que el llamante es admin usando el cliente admin (bypass RLS)
+    const { data: prof } = await admin
       .from('profesionales_kaizen')
       .select('rol')
-      .eq('user_id', user.id)
+      .eq('user_id', callerId)
       .eq('activo', true)
       .maybeSingle()
 
-    if (!prof || prof.rol !== 'admin') return json({ error: 'Sin permisos' }, 403)
+    if (!prof || prof.rol !== 'admin') return json({ error: 'Sin permisos de administrador' }, 403)
 
     // Cambiar contraseña
     const { user_id, password } = await req.json()
-    if (!user_id || !password) return json({ error: 'Faltan datos' }, 400)
+    if (!user_id || !password) return json({ error: 'Faltan user_id o password' }, 400)
+    if (String(password).length < 6) return json({ error: 'Mínimo 6 caracteres' }, 400)
 
-    const { error } = await adminClient.auth.admin.updateUserById(user_id, { password })
+    const { error } = await admin.auth.admin.updateUserById(user_id, { password })
     if (error) throw new Error(error.message)
 
     return json({ ok: true })
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Error interno'
-    return json({ error: msg }, 500)
+    return json({ error: e instanceof Error ? e.message : 'Error interno' }, 500)
   }
 })
