@@ -12,7 +12,7 @@ const ROL_COLOR = {
 // ── Modal Crear ──────────────────────────────────────────────────
 
 function ModalCrear({ onClose, onSaved }) {
-  const [form, setForm]     = useState({ nombres: '', apellidos: '', email_usuario: '', rol: 'profesional' })
+  const [form, setForm]     = useState({ nombres: '', apellidos: '', email_usuario: '', rol: 'profesional', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
 
@@ -20,7 +20,8 @@ function ModalCrear({ onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.nombres || !form.email_usuario) { setError('Nombre y usuario son obligatorios.'); return }
+    if (!form.nombres || !form.email_usuario || !form.password) { setError('Nombre, usuario y contraseña son obligatorios.'); return }
+    if (form.password.length < 6) { setError('La contraseña debe tener mínimo 6 caracteres.'); return }
     setLoading(true); setError('')
     try {
       await adminApi.crearProfesional(form)
@@ -58,7 +59,7 @@ function ModalCrear({ onClose, onSaved }) {
             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
-        <p className="text-xs text-gray-400">La contraseña se asigna desde el panel de Supabase.</p>
+        <Field label="Contraseña *" value={form.password} onChange={set('password')} type="password" placeholder="Mínimo 6 caracteres" />
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
         <BotonesModal onClose={onClose} loading={loading} labelOk="Crear profesional" />
       </form>
