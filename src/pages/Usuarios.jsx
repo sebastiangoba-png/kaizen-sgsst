@@ -117,6 +117,61 @@ function ModalEditar({ prof, onClose, onSaved }) {
   )
 }
 
+// ── Modal Contraseña (admin) ─────────────────────────────────────
+
+function ModalPassword({ prof, onClose }) {
+  const [password, setPassword]   = useState('')
+  const [confirm,  setConfirm]    = useState('')
+  const [loading,  setLoading]    = useState(false)
+  const [error,    setError]      = useState('')
+  const [ok,       setOk]         = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (password.length < 6)         { setError('Mínimo 6 caracteres.'); return }
+    if (password !== confirm)        { setError('Las contraseñas no coinciden.'); return }
+    if (!prof.user_id)               { setError('Este profesional aún no tiene usuario en Auth. Créalo primero desde Supabase.'); return }
+    setLoading(true); setError('')
+    try {
+      await adminApi.cambiarPassword(prof.user_id, password)
+      setOk(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const nombre = `${prof.nombres ?? ''} ${prof.apellidos ?? ''}`.trim()
+
+  return (
+    <Modal titulo="Cambiar contraseña" onClose={onClose}>
+      {ok ? (
+        <div className="text-center py-4 space-y-3">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-gray-900">Contraseña actualizada</p>
+          <p className="text-xs text-gray-500">{nombre} ya puede ingresar con la nueva contraseña.</p>
+          <button onClick={onClose} className="mt-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+            Cerrar
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-gray-600">Usuario: <span className="font-medium">{nombre}</span></p>
+          <Field label="Nueva contraseña" value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Mínimo 6 caracteres" />
+          <Field label="Confirmar contraseña" value={confirm}  onChange={e => setConfirm(e.target.value)}  type="password" placeholder="Repite la contraseña" />
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          <BotonesModal onClose={onClose} loading={loading} labelOk="Cambiar contraseña" />
+        </form>
+      )}
+    </Modal>
+  )
+}
+
 // ── Página principal ─────────────────────────────────────────────
 
 export default function Usuarios() {
@@ -226,12 +281,14 @@ export default function Usuarios() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setModal({ tipo: 'editar', data: p })}
-                      className="text-xs font-medium text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setModal({ tipo: 'editar', data: p })} className="text-xs font-medium text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-md transition-colors">
+                        Editar
+                      </button>
+                      <button onClick={() => setModal({ tipo: 'password', data: p })} className="text-xs font-medium text-gray-600 hover:bg-gray-100 px-2.5 py-1 rounded-md transition-colors">
+                        Contraseña
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -270,8 +327,9 @@ export default function Usuarios() {
         </div>
       )}
 
-      {modal?.tipo === 'crear'  && <ModalCrear  onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
-      {modal?.tipo === 'editar' && <ModalEditar prof={modal.data} onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
+      {modal?.tipo === 'crear'    && <ModalCrear    onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
+      {modal?.tipo === 'editar'   && <ModalEditar   prof={modal.data} onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
+      {modal?.tipo === 'password' && <ModalPassword prof={modal.data} onClose={() => setModal(null)} />}
     </div>
   )
 }
