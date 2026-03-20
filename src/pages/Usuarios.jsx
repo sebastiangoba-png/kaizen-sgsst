@@ -7,24 +7,20 @@ const ROL_COLOR = {
   profesional: 'bg-blue-100 text-blue-700',
   consultor:   'bg-gray-100 text-gray-700',
   cliente:     'bg-green-100 text-green-700',
-  trabajador:  'bg-yellow-100 text-yellow-700',
 }
 
-// ── Modales ─────────────────────────────────────────────────────
+// ── Modal Crear ──────────────────────────────────────────────────
 
 function ModalCrear({ onClose, onSaved }) {
-  const [form, setForm] = useState({ nombres: '', apellidos: '', email_usuario: '', rol: 'profesional', password: '' })
+  const [form, setForm]     = useState({ nombres: '', apellidos: '', email_usuario: '', rol: 'profesional' })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]   = useState('')
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.nombres || !form.email_usuario || !form.password) {
-      setError('Nombre, usuario y contraseña son obligatorios.')
-      return
-    }
+    if (!form.nombres || !form.email_usuario) { setError('Nombre y usuario son obligatorios.'); return }
     setLoading(true); setError('')
     try {
       await adminApi.crearProfesional(form)
@@ -47,9 +43,7 @@ function ModalCrear({ onClose, onSaved }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
           <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
             <input
-              type="text"
-              value={form.email_usuario}
-              onChange={set('email_usuario')}
+              type="text" value={form.email_usuario} onChange={set('email_usuario')}
               placeholder="diego"
               className="flex-1 px-3 py-2 text-sm outline-none"
             />
@@ -58,26 +52,26 @@ function ModalCrear({ onClose, onSaved }) {
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-            <select value={form.rol} onChange={set('rol')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <Field label="Contraseña *" value={form.password} onChange={set('password')} type="password" />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+          <select value={form.rol} onChange={set('rol')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
         </div>
+        <p className="text-xs text-gray-400">La contraseña se asigna desde el panel de Supabase.</p>
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-        <BotonesModal onClose={onClose} loading={loading} labelOk="Crear usuario" />
+        <BotonesModal onClose={onClose} loading={loading} labelOk="Crear profesional" />
       </form>
     </Modal>
   )
 }
 
+// ── Modal Editar ─────────────────────────────────────────────────
+
 function ModalEditar({ prof, onClose, onSaved }) {
-  const [form, setForm] = useState({ nombres: prof.nombres ?? '', apellidos: prof.apellidos ?? '', rol: prof.rol, activo: prof.activo })
+  const [form, setForm]       = useState({ nombres: prof.nombres ?? '', apellidos: prof.apellidos ?? '', rol: prof.rol, activo: prof.activo })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
@@ -85,7 +79,7 @@ function ModalEditar({ prof, onClose, onSaved }) {
     e.preventDefault()
     setLoading(true); setError('')
     try {
-      await adminApi.editarProfesional({ user_id: prof.user_id, ...form, activo: form.activo === true || form.activo === 'true' })
+      await adminApi.editarProfesional({ id: prof.id, ...form, activo: form.activo === true || form.activo === 'true' })
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -123,39 +117,6 @@ function ModalEditar({ prof, onClose, onSaved }) {
   )
 }
 
-function ModalPassword({ usuario, onClose, onSaved }) {
-  const [password, setPassword] = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (password.length < 6) { setError('Mínimo 6 caracteres.'); return }
-    setLoading(true); setError('')
-    try {
-      await adminApi.cambiarPassword({ user_id: usuario.user_id, password })
-      onSaved()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const nombre = `${usuario.nombres ?? ''} ${usuario.apellidos ?? ''}`.trim()
-
-  return (
-    <Modal titulo="Cambiar contraseña" onClose={onClose}>
-      <p className="text-sm text-gray-600 mb-4">Usuario: <span className="font-medium">{nombre}</span></p>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Nueva contraseña" value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Mínimo 6 caracteres" />
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-        <BotonesModal onClose={onClose} loading={loading} labelOk="Cambiar contraseña" />
-      </form>
-    </Modal>
-  )
-}
-
 // ── Página principal ─────────────────────────────────────────────
 
 export default function Usuarios() {
@@ -164,15 +125,15 @@ export default function Usuarios() {
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState('profesionales')
-  const [modal,         setModal]         = useState(null) // { tipo, data }
+  const [modal,         setModal]         = useState(null)
   const [busqueda,      setBusqueda]      = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true); setError('')
     try {
       const data = await adminApi.listar()
-      setProfesionales(data.profesionales ?? [])
-      setTrabajadores(data.trabajadores ?? [])
+      setProfesionales(data.profesionales)
+      setTrabajadores(data.trabajadores)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -224,15 +185,12 @@ export default function Usuarios() {
           ))}
         </div>
         <input
-          type="text"
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
+          type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
           placeholder="Buscar..."
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      {/* Contenido */}
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</p>}
 
       {loading ? (
@@ -256,7 +214,7 @@ export default function Usuarios() {
                 <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
               )}
               {profFiltrados.map(p => (
-                <tr key={p.user_id} className="hover:bg-gray-50">
+                <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{p.nombres} {p.apellidos}</td>
                   <td className="px-4 py-3 text-gray-500">{p.email?.replace('@kaizen.internal', '')}</td>
                   <td className="px-4 py-3">
@@ -267,11 +225,13 @@ export default function Usuarios() {
                       {p.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 justify-end">
-                      <BtnAccion label="Editar" color="blue" onClick={() => setModal({ tipo: 'editar', data: p })} />
-                      <BtnAccion label="Contraseña" color="gray" onClick={() => setModal({ tipo: 'password', data: p })} />
-                    </div>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setModal({ tipo: 'editar', data: p })}
+                      className="text-xs font-medium text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -287,12 +247,11 @@ export default function Usuarios() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Cédula</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Cargo</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Acceso</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {trabFiltrados.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
+                <tr><td colSpan={4} className="text-center py-8 text-gray-400">Sin resultados</td></tr>
               )}
               {trabFiltrados.map(t => (
                 <tr key={t.id} className="hover:bg-gray-50">
@@ -304,11 +263,6 @@ export default function Usuarios() {
                       {t.user_id ? 'Con acceso' : 'Sin acceso'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    {t.user_id && (
-                      <BtnAccion label="Contraseña" color="gray" onClick={() => setModal({ tipo: 'password', data: { ...t, user_id: t.user_id } })} />
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -316,10 +270,8 @@ export default function Usuarios() {
         </div>
       )}
 
-      {/* Modales */}
-      {modal?.tipo === 'crear'    && <ModalCrear    onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
-      {modal?.tipo === 'editar'   && <ModalEditar   prof={modal.data} onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
-      {modal?.tipo === 'password' && <ModalPassword usuario={modal.data} onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
+      {modal?.tipo === 'crear'  && <ModalCrear  onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
+      {modal?.tipo === 'editar' && <ModalEditar prof={modal.data} onClose={() => setModal(null)} onSaved={cerrarYRecargar} />}
     </div>
   )
 }
@@ -364,17 +316,5 @@ function BotonesModal({ onClose, loading, labelOk }) {
         {loading ? 'Guardando...' : labelOk}
       </button>
     </div>
-  )
-}
-
-function BtnAccion({ label, color, onClick }) {
-  const colors = {
-    blue: 'text-blue-600 hover:bg-blue-50',
-    gray: 'text-gray-600 hover:bg-gray-100',
-  }
-  return (
-    <button onClick={onClick} className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${colors[color]}`}>
-      {label}
-    </button>
   )
 }

@@ -1,29 +1,28 @@
 import { supabase } from './supabase'
 
-const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users`
-
-async function callAdmin(action, payload = {}) {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
-  if (!token) throw new Error('Sin sesión')
-
-  const res = await fetch(EDGE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ action, payload }),
-  })
-
-  const data = await res.json()
-  if (!res.ok || data.error) throw new Error(data.error ?? 'Error en el servidor')
-  return data
-}
-
 export const adminApi = {
-  listar:           ()       => callAdmin('listar'),
-  crearProfesional: (p)      => callAdmin('crear', p),
-  editarProfesional:(p)      => callAdmin('editar', p),
-  cambiarPassword:  (p)      => callAdmin('cambiar_password', p),
+  async listar() {
+    const [{ data: profesionales, error: e1 }, { data: trabajadores, error: e2 }] = await Promise.all([
+      supabase.from('profesionales_kaizen').select('*').order('nombres'),
+      supabase.from('trabajadores').select('id, nombres, apellidos, numero_documento, cargo, activo, user_id').order('nombres'),
+    ])
+    if (e1) throw new Error(e1.message)
+    if (e2) throw new Error(e2.message)
+    return { profesionales: profesionales ?? [], trabajadores: trabajadores ?? [] }
+  },
+
+  async crearProfesional({ nombres, apellidos, email_usuario, rol }) {
+    const email = `${String(email_usuario).trim()}@kaizen.internal`
+    const { error } = await supabase.from('profesionales_kaizen').insert({
+      nombres, apellidos, email, rol, activo: true
+    })
+    if (error) throw new Error(error.message)
+  },
+
+  async editarProfesional({ id, nombres, apellidos, rol, activo }) {
+    const { error } = await supabase.from('profesionales_kaizen')
+      .update({ nombres, apellidos, rol, activo })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
 }
