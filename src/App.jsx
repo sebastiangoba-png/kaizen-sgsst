@@ -7,19 +7,31 @@ import Dashboard from './pages/Dashboard'
 import Empresas from './pages/Empresas'
 import Trabajadores from './pages/Trabajadores'
 import TrabajadorDetalle from './pages/TrabajadorDetalle'
+import MiPerfil from './pages/MiPerfil'
 
-const ROLES_FULL   = ['admin', 'profesional', 'consultor', 'cliente']
-const ROLES_ADMIN  = ['admin', 'profesional', 'consultor']
+const ROLES_ADMIN    = ['admin', 'profesional', 'consultor']
+const ROLES_FULL     = ['admin', 'profesional', 'consultor', 'cliente']
+const ROLES_TRABAJADOR = ['trabajador']
 
 export default function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Ruta pública */}
+          {/* Pública */}
           <Route path="/login" element={<Login />} />
 
-          {/* Rutas protegidas dentro del Layout */}
+          {/* Trabajador: solo su perfil */}
+          <Route
+            path="/mi-perfil"
+            element={
+              <ProtectedRoute rolesPermitidos={ROLES_TRABAJADOR}>
+                <MiPerfil />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin / Profesional / Consultor */}
           <Route
             path="/"
             element={

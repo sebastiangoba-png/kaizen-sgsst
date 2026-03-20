@@ -1,27 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
-  const { login } = useAuth()
-  const [cedula,   setCedula]   = useState('')
+  const { login, session, perfil, loading } = useAuth()
+  const navigate = useNavigate()
+  const [usuario,  setUsuario]  = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [enviando, setEnviando] = useState(false)
+
+  // Si ya hay sesión activa, redirigir según rol
+  useEffect(() => {
+    if (loading) return
+    if (session && perfil) {
+      if (perfil.rol === 'trabajador') navigate('/mi-perfil', { replace: true })
+      else navigate('/', { replace: true })
+    }
+  }, [session, perfil, loading, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!cedula || !password) {
-      setError('Ingresa tu cédula y contraseña.')
+    if (!usuario || !password) {
+      setError('Ingresa tu cédula/usuario y contraseña.')
       return
     }
     setError('')
-    setLoading(true)
+    setEnviando(true)
     try {
-      await login(cedula, password)
-    } catch (err) {
-      setError('Cédula o contraseña incorrectos.')
-    } finally {
-      setLoading(false)
+      await login(usuario, password)
+      // La redirección la maneja el useEffect de arriba cuando perfil cargue
+    } catch {
+      setError('Usuario o contraseña incorrectos.')
+      setEnviando(false)
     }
   }
 
@@ -46,16 +57,16 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cédula
+                Cédula o usuario
               </label>
               <input
                 type="text"
-                inputMode="numeric"
-                value={cedula}
-                onChange={e => setCedula(e.target.value)}
-                placeholder="Ej: 1234567890"
+                value={usuario}
+                onChange={e => setUsuario(e.target.value)}
+                placeholder="Ej: 1070624803 o diego"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
+                autoComplete="username"
               />
             </div>
 
@@ -69,6 +80,7 @@ export default function Login() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoComplete="current-password"
               />
             </div>
 
@@ -80,10 +92,18 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={enviando}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {enviando ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Entrando...
+                </span>
+              ) : 'Entrar'}
             </button>
           </form>
         </div>
